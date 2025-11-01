@@ -4,8 +4,11 @@ Visualizações gráficas para dados metagenômicos processados com Kraken2 e Br
 
 ## 📊 Scripts incluídos
 
-- `heatmap_top20_bacterias.py`: Gera um heatmap de presença/ausência das 20 espécies bacterianas mais abundantes por amostra.
-- `heatmap_top20_fungos.py`: Gera um heatmap de presença/ausência das 20 espécies fúngicas mais abundantes por amostra.
+- criação de matrizes
+- indices ecológicos
+- heatmaps
+- dendogramas
+- pcoas
 
 ## 📁 Estrutura esperada dos arquivos de entrada
 
@@ -18,8 +21,7 @@ Os arquivos `.tsv` devem conter pelo menos as seguintes colunas:
 ## ▶️ Como executar
 
 ```bash
-python3 heatmap_top20_bacterias.py
-python3 heatmap_top20_fungos.py
+python3 nome_do_script.py
 
 
 Requisitos
