@@ -1,5 +1,3 @@
-# Kraken_Bracken_Gr-ficos
-Visualizações gráficas para dados metagenômicos processados com Kraken2 e Bracken
 # Kraken_Bracken_Gráficos
 
 Visualizações gráficas para dados metagenômicos processados com Kraken2 e Bracken.
