@@ -1,43 +1,98 @@
 import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
-from matplotlib.patches import Ellipse
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse
+from sklearn.decomposition import PCA
+from scipy.spatial.distance import pdist
+from scipy.cluster.hierarchy import linkage, dendrogram
 
-# Carregar matriz de dissimilaridade de Bray-Curtis
-df = pd.read_csv("braycurtis_bacterias.tsv", sep="\t", index_col=0)
+# =========================
+# 1. Carregar e preparar os dados
+# =========================
 
-# Aplicar PCA como aproximação do PCoA
-pca = PCA(n_components=2)
-coords = pca.fit_transform(df.values)
-explained = pca.explained_variance_ratio_ * 100
+df = pd.read_csv("matriz_bacterias.tsv", sep="\t", index_col=0).T
+df = df.apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+df = df[df.sum(axis=1) > 0]
 
-# Amostras e cores
-samples = df.index.tolist()
-colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]
+# =========================
+# 2. Normalizações
+# =========================
 
-# Função para adicionar elipses individuais
-def add_ellipse(ax, x, y, color):
-    ellipse = Ellipse((x, y), width=0.08, height=0.05, edgecolor=color,
-                      facecolor='none', linestyle='--', linewidth=1.2)
-    ax.add_patch(ellipse)
+df_tss = df.div(df.sum(axis=1), axis=0)
+df_hellinger = np.sqrt(df_tss)
 
-# Criar gráfico
-fig, ax = plt.subplots(figsize=(8, 6))
-for i, sample in enumerate(samples):
-    x, y = coords[i, 0], coords[i, 1]
-    ax.scatter(x, y, color=colors[i], label=sample)
-    ax.text(x + 0.01, y, sample, fontsize=10)
-    add_ellipse(ax, x, y, colors[i])
+# =========================
+# 3. Função para PCoA com PCA (sem título)
+# =========================
 
-# Eixos e estilo
-ax.set_xlabel(f"PCoA1 ({explained[0]:.1f}% variance)", fontsize=12)
-ax.set_ylabel(f"PCoA2 ({explained[1]:.1f}% variance)", fontsize=12)
-ax.set_title("PCoA of Bacterial Communities (Bray-Curtis)", fontsize=14)
-ax.grid(True)
-ax.legend()
-plt.tight_layout()
+def plot_pcoa(matrix, filename):
+    pca = PCA(n_components=2)
+    coords = pca.fit_transform(matrix.values)
+    explained = pca.explained_variance_ratio_ * 100
+    samples = matrix.index.tolist()
+    colors = plt.cm.tab10.colors
 
-# Salvar imagem
-plt.savefig("pcoa_bacteria_colored.png", dpi=300)
-plt.show()
+    fig, ax = plt.subplots(figsize=(8, 6))
+    for i, sample in enumerate(samples):
+        x, y = coords[i]
+        color = colors[i % len(colors)]
+        ax.scatter(x, y, color=color, label=sample, s=60, edgecolor='black')
+        ax.text(x + 0.01, y, sample, fontsize=9)
+        ellipse = Ellipse((x, y), width=0.08, height=0.05, edgecolor=color,
+                          facecolor='none', linestyle='--', linewidth=1.2)
+        ax.add_patch(ellipse)
+
+    ax.set_xlabel(f"PCoA1 ({explained[0]:.1f}%)", fontsize=12)
+    ax.set_ylabel(f"PCoA2 ({explained[1]:.1f}%)", fontsize=12)
+    ax.grid(True, linestyle='--', alpha=0.5)
+    ax.legend(loc='best', fontsize=9)
+    plt.tight_layout()
+    plt.savefig(filename, dpi=300)
+    plt.close()
+
+# =========================
+# 4. Função para Dendrograma (sem título)
+# =========================
+
+def plot_dendrogram(matrix, filename):
+    dist_matrix = pdist(matrix.values, metric='braycurtis')
+    linkage_matrix = linkage(dist_matrix, method='average')
+    plt.figure(figsize=(10, 6))
+    dendrogram(linkage_matrix, labels=matrix.index, leaf_rotation=90)
+    plt.xlabel("Amostras", fontsize=12)
+    plt.ylabel("Distância Bray–Curtis", fontsize=12)
+    plt.tight_layout()
+    plt.savefig(filename, dpi=300)
+    plt.close()
+
+# =========================
+# 5. Comparar sensibilidade: distância média Bray–Curtis
+# =========================
+
+dist_tss = pdist(df_tss.values, metric='braycurtis')
+dist_hellinger = pdist(df_hellinger.values, metric='braycurtis')
+
+media_tss = dist_tss.mean()
+media_hellinger = dist_hellinger.mean()
+
+print("📊 Comparação de Sensibilidade - Bray–Curtis")
+print(f"Distância média (TSS):      {media_tss:.4f}")
+print(f"Distância média (Hellinger): {media_hellinger:.4f}")
+
+if media_hellinger > media_tss:
+    print("✅ Hellinger foi mais sensível à variação entre amostras.")
+elif media_tss > media_hellinger:
+    print("✅ TSS foi mais sensível à variação entre amostras.")
+else:
+    print("⚖️ Ambas as normalizações tiveram sensibilidade equivalente.")
+
+# =========================
+# 6. Gerar gráficos
+# =========================
+
+plot_pcoa(df_tss, "pcoa_tss.png")
+plot_pcoa(df_hellinger, "pcoa_hellinger.png")
+plot_dendrogram(df_tss, "dendrogram_tss.png")
+plot_dendrogram(df_hellinger, "dendrogram_hellinger.png")
+
+print("✅ Gráficos gerados sem títulos. Prontos para uso em artigo.")
